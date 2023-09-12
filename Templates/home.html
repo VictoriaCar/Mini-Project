@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Make the body take up the entire viewport height */
+            margin: 0; /* Remove default margin */
+            background-color: #ffffff; /* Optional background color */
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            align-items: center;
+        }
+
+        .image {
+            max-width: 100%;
+            margin-left: auto; /* Move the image to the right within the container */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='pic.jpeg') }}" alt="Home Image" class="image">
+        <p>A free chat platform!</p>
+        <p>Please log in to continue.</p>
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('register') }}">Register</a>
+    </div>
+</body>
+</html>
+
