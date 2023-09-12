@@ -1,14 +1,12 @@
-import requests
 import threading
-import os
-import sys
+import socket
 import time
 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
-cred = credentials.Certificate("Firebase.json")
+cred = credentials.Certificate("webserver/Firebase.json")
 
 firebase_admin.initialize_app(cred, {
     'databaseURL' : 'https://moodyapp-feec9-default-rtdb.firebaseio.com'
@@ -16,7 +14,9 @@ firebase_admin.initialize_app(cred, {
 
 test_mode = True
 
+# firebase
 def get_users():
+    global test_mode
     return db.reference('/users/') if test_mode else db.reference('/test/')
 
 def init_test():
@@ -93,7 +93,71 @@ def read_messages(user):
 
 init_test()
 
+
+# init socket
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+hostname = socket.gethostname()
+IPAddr = socket.gethostbyname(hostname)
+
+host = IPAddr
+port = 7807
+
+serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+serverSocket.bind((host,port))
+backlog = 256
+
+serverSocket.listen()
+size = 4096
+
+
+# server
+quit_server = False
+print(host,port)
+def server():
+    global quit_server
+    message_queue = [] # store all the .accept() threads in here, then process
+    print("webserver live")
+    while not quit_server:
+        clientSocket, src = serverSocket.accept()
+        ipaddr, port = src
+        try:
+            message = clientSocket.recv(size).decode()
+            print("message from ["+ipaddr+"]:", message)
+            if message == "QUIT":
+                quit_server = True
+                break
+        except IOError:
+            MESSAGE = "socket not connected"
+            clientSocket.send(MESSAGE.encode())
+            clientSocket.close()
+
+    serverSocket.close()
+
+        # wait for msg
+        # recieve msg
+        # parse msg
+            # src - dest
+            # info
+            # content
+
+        
+def server_init():
+    # we want to get the ip addr of the server
+    # we want to create a task to recieve messagings
+    # create a queue of messging (low volume traffic, no need for LB)
+    threading.Thread(target=server).start()
+
+
+
+if __name__ == "__main__":
+    server_init()
+
 ### NOTES ###
     # to order by print order_by_child('field').get()
     # to sort by a param, do indexOn : ['field'] in Rule tab
     # this server handles client requests, multithreaded, and database handling
+    # .join() preempts main until thread is done
+    # use AWS CodeDeploy
+
+
+    # sample deployment
