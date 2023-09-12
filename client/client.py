@@ -19,3 +19,5 @@ data = client_socket.send(emsg)  # 4kb is the buffer size
 
 # Close the client socket
 client_socket.close()
+
+# https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create-deploy-python-flask.html
