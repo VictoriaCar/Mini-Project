@@ -21,14 +21,14 @@
             border: 10px solid #ccc;
             padding: 20px;
             border-radius: 100px;
-            max-width: 500px; /* Adjust the maximum width as needed */
+            max-width: 500px; 
             background-color: #f5f5f5;
         }
 
         /* Style the chat messages */
         .chat-messages {
-            max-height: 600px; /* Limit the height of the chat messages */
-            overflow-y: auto; /* Enable vertical scrolling if messages overflow */
+            max-height: 600px; 
+            overflow-y: auto; 
         }
 
         /* Style the message input box */
@@ -37,7 +37,7 @@
             border-radius: 10px;
             padding: 25px;
             margin-top: 200px;
-            max-width: 600px; /* Adjust the maximum width as needed */
+            max-width: 600px; 
             background-color: #fff;
         }
 
@@ -60,6 +60,15 @@
             border-radius: 500px;
             cursor: pointer;
         }
+
+        .chat-search {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
     </style>
 </head>
 <body>
@@ -70,15 +79,26 @@
             <p>You are now logged in and can send messages.</p>
         </div>
 
-        <!-- Chat Box -->
-        <div class="chat-box">
-            <div class="chat-messages" id="chat-messages">
-                <!-- Display chat messages here -->
-                {% for message in chat_messages %}
-                    <div class="message">{{ message }}</div>
-                {% endfor %}
+<!-- Chat Box -->
+<div class="chat-box">
+    <div class="chat-messages" id="chat-messages">
+        <!-- Display chat messages and sentiment analysis results here -->
+        {% for message, sentiment_result in chat_messages %}
+            <div class="message">{{ message }}</div>
+            <div class="sentiment">
+                Sentiment: {{ sentiment_result.score_tag }}
+                Confidence: {{ sentiment_result.confidence }}%
             </div>
-        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Chat Search and New Chat Window -->
+<div class="chat-search">
+    <input type="text" id="chat-search-input" placeholder="Search for people...">
+    <button onclick="searchChat()">Search</button>
+</div>
+
 
         <!-- Message Input Box -->
         <div class="message-input-box">
@@ -89,25 +109,56 @@
         <p><a href="{{ url_for('logout') }}">Logout</a></p>
     </div>
 
-    <!-- JavaScript for sending and displaying messages -->
-    <script>
-        function sendMessage() {
-            var messageInput = document.getElementById('message-input');
-            var message = messageInput.value;
-            var chatMessages = document.getElementById('chat-messages');
-            
-            // Create a new message element and append it to the chat messages container
-            var messageElement = document.createElement('div');
-            messageElement.className = 'message';
-            messageElement.textContent = message;
-            chatMessages.appendChild(messageElement);
+<!-- JavaScript for sending and displaying messages -->
+<script>
+    function sendMessage() {
+        var messageInput = document.getElementById('message-input');
+        var message = messageInput.value;
+        var chatMessages = document.getElementById('chat-messages');
+    
+        // Create a new message element and append it to the chat messages container
+        var messageElement = document.createElement('div');
+        messageElement.className = 'message';
+        messageElement.textContent = message;
+        chatMessages.appendChild(messageElement);
+    
+        // Clear the input field after sending
+        messageInput.value = '';
+    
+        // Scroll to the bottom to show the latest message
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+        // Make an AJAX request to analyze sentiment
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/analyze_sentiment', true);  // Use the correct endpoint
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
 
-            // Clear the input field after sending
-            messageInput.value = '';
+                var sentimentData = JSON.parse(xhr.responseText);
+                var sentimentElement = document.createElement('div');
+                sentimentElement.className = 'message';
+                sentimentElement.textContent = 'Sentiment: ' + sentimentData.score_tag + ', Confidence: ' + sentimentData.confidence;
+                chatMessages.appendChild(sentimentElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        };
+    
+        // Send the request with the user's message and language
+        var language = 'en'; 
+        xhr.send('text=' + message + '&language=' + language);
+    }
 
-            // Scroll to the bottom to show the latest message
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    </script>
+    function searchChat() {
+    var chatSearchInput = document.getElementById('chat-search-input');
+    var searchQuery = chatSearchInput.value;
+
+    alert('Searching for people: ' + searchQuery);
+    chatSearchInput.value = ''; 
+}
+
+    </script>    
 </body>
 </html>
+
+
