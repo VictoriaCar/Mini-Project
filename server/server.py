@@ -77,29 +77,30 @@ def init_test():
 def set_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['email'] == cmds[1]:
+        if v['email'] == cmds['email']:
             ref.child(k).update({
-                'messages' : [(cmds[2],time.time())].extend(v['messages'])
+                'messages' : [(cmds['message'],time.time())].extend(v['messages'])
             })
-        else:
-            ref.push({
-                'email' : cmds[1],
-                'username' : cmds[2],
-                'messages' : [(cmds[3], time.time())],
-            })
+        return None
+    
+    ref.push({
+        'email' : cmds['email'],
+        'username' : cmds['username'],
+        'messages' : [(cmds['message'], time.time())],
+    })
 
 # delete
 def delete_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['email'] == cmds[1]:
+        if v['email'] == cmds['email']:
             ref.child(k).set({})
 
 # read
 def get_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['email'] == cmds[1]:
+        if v['email'] == cmds['email']:
             return ref.get()
     
     return None
@@ -108,26 +109,36 @@ def get_message(cmds):
 def read_messages(user):
     print(get_message(user))
 
+# login
+def user_login(cmds):
+    ref = db.reference('/login')
+    for k, v in ref.get().items():
+        if v['email'] == cmds['email']:
+            return v
+    
+def user_register(cmds):
+    ref = db.reference('/login')
+    ref.push({
+         'email' : cmds['email'],
+         'key' : cmds['key'],
+     })
+
+
 init_test()
 
-fbdb = {
-    "GET" : get_message,
-    "SET" : set_message,
-    "DEL" : delete_message,
-}
-
 def parse_command(packet):
-    '''
-        cmds:
-            GET - read_messages
-            SET - set_messsages
-            DEL - delete_message
-    '''
+    fbdb = {
+        "GET" : get_message,
+        "SET" : set_message,
+        "DEL" : delete_message,
+        "LOGIN" : user_login,
+        "REGISTER" : user_register,
+    }
 
     if packet['cmd'] not in fbdb.keys():
         return None
     else:
-        fbdb[packet['cmd'][0]](packet['cmd'])
+        return fbdb[packet['cmd']](packet)
 
 # init socket
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -173,8 +184,9 @@ def server():
                 quit_server = True
                 break
 
-            parse_command(packet)
-
+            data = parse_command(packet)
+            if data['cmd'] == 'LOGIN':
+                clientSocket.send(json.dumps(data).encode())
         except IOError:
             MESSAGE = "socket not connected"
             clientSocket.send(MESSAGE.encode())

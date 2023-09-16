@@ -28,10 +28,11 @@ def create_client_socket(packet):
     # socket request to get data
     # Create a socket object
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+    json_data = json.dumps(packet)
+    
     # Connect to the server
     client_socket.connect((host, port))
-    client_socket.send(packet.encode())
+    client_socket.send(json_data.encode())
 
     data = client_socket.recv(1024) # this will preempt the app; 
     data.decode()
@@ -41,8 +42,13 @@ def create_client_socket(packet):
 def load_user(email):
     # create a thread task for client socket
     # we want to GET asynch
-    cmd = "GET test@test.com"
-    user = create_client_socket(cmd)
+    packet = {
+        "cmd" : "GET",
+        "email" : "email",
+        "username" : "",
+        "message" : "",
+    }
+    user = create_client_socket(packet)
 
     return None if not user else user
 
@@ -69,6 +75,13 @@ def register():
 
         # Add the new user to the database
             # socket request to AWS server
+        packet = {
+            "cmd" : "REGISTER",
+            "email" : form.email.data,
+            "username" : "",
+            "message" : hashed_password,
+        }
+        create_client_socket(packet)
 
         # Log the new user in after successful registration
         login_user(new_user)
@@ -88,8 +101,15 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         # socket request to find user
-        user = {} # from firebase
-        if user and check_password_hash(user.password, form.password.data):
+        packet = {
+            "cmd" : "LOGIN",
+            "email" : form.email.data,
+            "username" : "",
+            "message" : "",
+        }
+        user = create_client_socket(packet) # from firebase
+
+        if user and check_password_hash(user['key'], form.password.data):
             login_user(user, remember=form.remember.data)
             return redirect(url_for('dashboard'))
         else:
