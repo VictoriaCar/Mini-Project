@@ -1,5 +1,6 @@
-import threading
+import json
 import socket
+import threading
 import time
 
 import firebase_admin
@@ -115,19 +116,18 @@ fbdb = {
     "DEL" : delete_message,
 }
 
-def parse_command(msg):
+def parse_command(packet):
     '''
         cmds:
             GET - read_messages
             SET - set_messsages
             DEL - delete_message
     '''
-    cmds = msg.split()
 
-    if cmds[0] not in fbdb.keys():
+    if packet['cmd'] not in fbdb.keys():
         return None
     else:
-        fbdb[cmds[0]](cmds)
+        fbdb[packet['cmd'][0]](packet['cmd'])
 
 # init socket
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -141,31 +141,39 @@ serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 serverSocket.bind((host,port))
 backlog = 256
 
-serverSocket.listen()
-size = 4096
+serverSocket.listen(backlog)
+size = 1024
 
 
 # server
+    # wait for msg - always wait for a msg
+    # recieve & parse msg - THREAD TASK
+        # src - dest
+        # info
+        # content
+
+
 quit_server = False
-print(host,port)
 def server():
     global quit_server
+    global size
     message_queue = [] # store all the .accept() threads in here, then process
-    print("webserver live")
+    print(f"Server is listening on {host}:{port}")
     while not quit_server:
         clientSocket, src = serverSocket.accept()
         ipaddr, port = src
+        json_data = clientSocket.recv(size).decode()
         try:
             # CMD email username message
             # lex by 
-            message = clientSocket.recv(size).decode()
-            print("message from ["+ipaddr+"]:", message)
+            packet = json.loads(json_data)
+            print("message from ["+ipaddr+"]:", packet)
 
-            if message == "QUIT":
+            if packet['cmd'] == "QUIT":
                 quit_server = True
                 break
 
-            parse_command(message)
+            parse_command(packet)
 
         except IOError:
             MESSAGE = "socket not connected"
@@ -173,14 +181,6 @@ def server():
             clientSocket.close()
 
     serverSocket.close()
-
-        # wait for msg
-        # recieve msg
-        # parse msg
-            # src - dest
-            # info
-            # content
-
         
 def server_init():
     # we want to get the ip addr of the server

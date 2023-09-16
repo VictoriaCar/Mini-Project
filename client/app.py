@@ -3,6 +3,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
 import socket
+import json
 
 app = Flask(__name__, template_folder='templates')
 
@@ -21,7 +22,7 @@ class User(UserMixin):
     def __init__(self, id):
         self.id = id
 
-def create_client_socket(message):
+def create_client_socket(packet):
     global host
     global port
     # socket request to get data
@@ -30,14 +31,14 @@ def create_client_socket(message):
 
     # Connect to the server
     client_socket.connect((host, port))
-    client_socket.send(message.encode())
+    client_socket.send(packet.encode())
 
     data = client_socket.recv(1024) # this will preempt the app; 
     data.decode()
 
 # Load user function for Flask-Login
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(email):
     # create a thread task for client socket
     # we want to GET asynch
     cmd = "GET test@test.com"
