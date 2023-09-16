@@ -2,25 +2,27 @@ from flask import Flask, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
+from flask_sqlalchemy import SQLAlchemy
 import socket
 import json
 
 app = Flask(__name__, template_folder='templates')
+app.config['SECRET_KEY'] = '129jasapowqe;[]/oiwq498498'  # Replace with your secret key
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'  # Adjust the database URI as needed
 
+db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 host = '3.130.58.56'  # Loopback address for local testing
 port = 7807
 
-# Define the User model class
-class User(UserMixin):
-    id = ""
-    email = ""
-    password = ""
+sessions = []
 
-    def __init__(self, id):
-        self.id = id
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
 
 def create_client_socket(packet):
     global host
@@ -39,18 +41,23 @@ def create_client_socket(packet):
 
 # Load user function for Flask-Login
 @login_manager.user_loader
-def load_user(email):
-    # create a thread task for client socket
-    # we want to GET asynch
-    packet = {
-        "cmd" : "GET",
-        "email" : "email",
-        "username" : "",
-        "message" : "",
-    }
-    user = create_client_socket(packet)
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-    return None if not user else user
+# # Load user function for Flask-Login
+# @login_manager.user_loader
+# def load_user(user_id):
+#     # create a thread task for client socket
+#     # we want to GET asynch
+#     packet = {
+#         "cmd" : "AUTH",
+#         "user_id" : user_id,
+#     }
+    
+#     user = json.loads(create_client_socket(packet).decode())
+#     user_obj = User(user.user_id)
+
+#     return None if not user_obj else user_obj
 
 # # Create the database tables
 # with app.app_context():
@@ -74,17 +81,23 @@ def register():
         new_user = User(email=form.email.data, password=hashed_password)
 
         # Add the new user to the database
-            # socket request to AWS server
-        packet = {
-            "cmd" : "REGISTER",
-            "email" : form.email.data,
-            "username" : "",
-            "message" : hashed_password,
-        }
-        create_client_socket(packet)
+        db.session.add(new_user)
+        db.session.commit()
 
+        # Add the new user to the database
+            # socket request to AWS server
+        # packet = {
+        #     "cmd" : "REGISTER",
+        #     "email" : form.email.data,
+        #     "key" : hashed_password,
+        # }
+        # user = json.loads(create_client_socket(packet).decode())
+        # new_user_obj = User(user.uid)
+
+        print(new_user)
         # Log the new user in after successful registration
         login_user(new_user)
+        # sessions.append(user.uid)
 
         flash('Your account has been created! You are now logged in.', 'success')
         return redirect(url_for('dashboard'))
@@ -93,7 +106,7 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-
+    global sessions
     # socket request to get the database
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -101,16 +114,20 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         # socket request to find user
-        packet = {
-            "cmd" : "LOGIN",
-            "email" : form.email.data,
-            "username" : "",
-            "message" : "",
-        }
-        user = create_client_socket(packet) # from firebase
+        # packet = {
+        #     "cmd" : "LOGIN",
+        #     "email" : form.email.data,
+        # }
 
-        if user and check_password_hash(user['key'], form.password.data):
+        # user = json.loads(create_client_socket(packet).decode()) # from firebase
+        # user_obj = User(user['AUTH'].uid)
+
+        user = User.query.filter_by(email=form.email.data).first()
+
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
+            # sessions.append(user['AUTH'].uid)
+
             return redirect(url_for('dashboard'))
         else:
             flash('Login unsuccessful. Please check your email and password.', 'danger')

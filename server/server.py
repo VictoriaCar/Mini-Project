@@ -4,8 +4,7 @@ import threading
 import time
 
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
+from firebase_admin import db, credentials, auth, exceptions
 
 cred = credentials.Certificate("webserver/Firebase.json")
 
@@ -109,11 +108,16 @@ def get_message(cmds):
 def read_messages(user):
     print(get_message(user))
 
+# auth the email
+def auth_user(cmds):
+    return None if not auth.get_user(cmds['user_id']) else auth.get_user(cmds['user_id'])
+
 # login
 def user_login(cmds):
     ref = db.reference('/login')
     for k, v in ref.get().items():
         if v['email'] == cmds['email']:
+            v['AUTH'] = auth.get_user_by_email(cmds['email'])
             return v
     
 def user_register(cmds):
@@ -122,9 +126,9 @@ def user_register(cmds):
          'email' : cmds['email'],
          'key' : cmds['key'],
      })
+    return auth.get_user_by_email(cmds['email'])
 
-
-init_test()
+# init_test()
 
 def parse_command(packet):
     fbdb = {
@@ -133,6 +137,7 @@ def parse_command(packet):
         "DEL" : delete_message,
         "LOGIN" : user_login,
         "REGISTER" : user_register,
+        "AUTH" : auth_user,
     }
 
     if packet['cmd'] not in fbdb.keys():
@@ -154,7 +159,7 @@ backlog = 256
 
 serverSocket.listen(backlog)
 size = 1024
-
+print(f"Server is listening on {host}:{port}")
 
 # server
     # wait for msg - always wait for a msg
@@ -169,7 +174,6 @@ def server():
     global quit_server
     global size
     message_queue = [] # store all the .accept() threads in here, then process
-    print(f"Server is listening on {host}:{port}")
     while not quit_server:
         clientSocket, src = serverSocket.accept()
         ipaddr, port = src
@@ -185,8 +189,11 @@ def server():
                 break
 
             data = parse_command(packet)
-            if data['cmd'] == 'LOGIN':
-                clientSocket.send(json.dumps(data).encode())
+            if data:
+                print(data)
+                if packet['cmd'] == 'LOGIN' or packet['cmd'] == 'REGISTER' or packet['cmd'] =='AUTH':
+                    clientSocket.send(json.dumps(data).encode())
+
         except IOError:
             MESSAGE = "socket not connected"
             clientSocket.send(MESSAGE.encode())
