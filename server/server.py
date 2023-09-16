@@ -33,66 +33,101 @@ def init_test():
     # ref.push().set(value)
     # can use push() for autokey gen, leave as set() for test
     # ref = db.reference('/users/test/')
+    '''
+    organize the msg structure
+    ID - email
+        user
+        msgs[(msg,timestamp)]
+    '''
 
     ref.set({
-        'key0' : {
-            'timestamp' : time.time(),
-            'old_timestamp' : -1,
-            'username' : 'user000',
-            'content' : 'TEST MESSAGE 0',
-            'old_content' : -1,
-        },
+       'key0' : {
+            'email' : 'test@test.com',
+            'username' : 'test',
+            'messages' : [("hello world", time.time())],
+       },
         'key1' : {
-            'timestamp' : time.time(),
-            'old_timestamp' : -1,
-            'username' : 'user001',
-            'content' : 'TEST MESSAGE 1',
-            'old_content' : -1,
-        },
+            'email' : 'test@test.com',
+            'username' : 'test',
+            'messages' : [("hello world", time.time())],
+       },
     })
+
+    # ref.set({
+    #     'key0' : {
+    #         'timestamp' : time.time(),
+    #         'old_timestamp' : -1,
+    #         'username' : 'user000',
+    #         'content' : 'TEST MESSAGE 0',
+    #         'old_content' : -1,
+    #     },
+    #     'key1' : {
+    #         'timestamp' : time.time(),
+    #         'old_timestamp' : -1,
+    #         'username' : 'user001',
+    #         'content' : 'TEST MESSAGE 1',
+    #         'old_content' : -1,
+    #     },
+    # })
 
     print(db.reference('/test/').get()) # should see key0 and key1
 
-# update messages
-def update_message(user, new_content):
-    # for now we can directly assume the key is user000
-        # user000Ref = usersRef.child('user000')
-        # user000Ref.update({
-        #     'o_timestamp' : time.time,
-        #     'o_content' : 'TEST MESSAGE 1'
-        # })
 
-    # using push() we'll need a for loop - also using key
+def set_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['username'] == user:
-            old_timestamp = v['timestamp']
-            old_content = [].extend(v['content'])
-
+        if v['email'] == cmds[1]:
             ref.child(k).update({
-                'timestamp' : time.time(),
-                'old_timestamp' : old_timestamp,
-                'content' : new_content,
-                'old_content' : old_content,
+                'messages' : [(cmds[2],time.time())].extend(v['messages'])
+            })
+        else:
+            ref.push({
+                'email' : cmds[1],
+                'username' : cmds[2],
+                'messages' : [(cmds[3], time.time())],
             })
 
 # delete
-def delete_message(user, new_content):
+def delete_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['username'] == user:
+        if v['email'] == cmds[1]:
             ref.child(k).set({})
 
 # read
-def read_messages(user):
+def get_message(cmds):
     ref = get_users()
     for k, v in ref.get().items():
-        if v['username'] == user:
-            print(ref.get())
+        if v['email'] == cmds[1]:
+            return ref.get()
     
+    return None
+
+# read
+def read_messages(user):
+    print(get_message(user))
 
 init_test()
 
+fbdb = {
+    "GET" : get_message,
+    "SET" : set_message,
+    "DEL" : delete_message,
+}
+
+def parse_command(msg):
+    '''
+        cmds:
+            GET - read_messages
+            SET - set_messsages
+            DEL - delete_message
+    '''
+    cmds = msg.split()
+
+    if cmds[0] not in fbdb.keys():
+        return None
+    else:
+        fbdb[cmds[0]](cmds)
 
 # init socket
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -121,11 +156,17 @@ def server():
         clientSocket, src = serverSocket.accept()
         ipaddr, port = src
         try:
+            # CMD email username message
+            # lex by 
             message = clientSocket.recv(size).decode()
             print("message from ["+ipaddr+"]:", message)
+
             if message == "QUIT":
                 quit_server = True
                 break
+
+            parse_command(message)
+
         except IOError:
             MESSAGE = "socket not connected"
             clientSocket.send(MESSAGE.encode())

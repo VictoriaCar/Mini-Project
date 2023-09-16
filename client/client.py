@@ -4,9 +4,6 @@ import socket
 host = '3.130.58.56'  # Loopback address for local testing
 port = 7807
 
-hostname = socket.gethostname()
-IPAddr = socket.gethostbyname(hostname)
-
 # Create a socket object
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

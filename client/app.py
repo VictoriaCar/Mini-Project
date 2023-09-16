@@ -1,32 +1,53 @@
 from flask import Flask, render_template, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
-
+import socket
 
 app = Flask(__name__, template_folder='templates')
-app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with your secret key
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'  # Adjust the database URI as needed
 
-db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+host = '3.130.58.56'  # Loopback address for local testing
+port = 7807
+
 # Define the User model class
-class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+class User(UserMixin):
+    id = ""
+    email = ""
+    password = ""
+
+    def __init__(self, id):
+        self.id = id
+
+def create_client_socket(message):
+    global host
+    global port
+    # socket request to get data
+    # Create a socket object
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Connect to the server
+    client_socket.connect((host, port))
+    client_socket.send(message.encode())
+
+    data = client_socket.recv(1024) # this will preempt the app; 
+    data.decode()
 
 # Load user function for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    # create a thread task for client socket
+    # we want to GET asynch
+    cmd = "GET test@test.com"
+    user = create_client_socket(cmd)
 
-# Create the database tables
-with app.app_context():
-    db.create_all()
+    return None if not user else user
+
+# # Create the database tables
+# with app.app_context():
+#     db.create_all()
 
 # Rest of your app routes and logic
 @app.route('/')
@@ -46,8 +67,7 @@ def register():
         new_user = User(email=form.email.data, password=hashed_password)
 
         # Add the new user to the database
-        db.session.add(new_user)
-        db.session.commit()
+            # socket request to AWS server
 
         # Log the new user in after successful registration
         login_user(new_user)
@@ -59,12 +79,15 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
+    # socket request to get the database
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        # socket request to find user
+        user = {} # from firebase
         if user and check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             return redirect(url_for('dashboard'))

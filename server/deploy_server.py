@@ -9,7 +9,7 @@ import os
 os.system('pipreqs .')
 
 os.system('scp -r -i ~/.keys/EC2WebServer.pem server/server.py ec2-user@ec2-3-130-58-56.us-east-2.compute.amazonaws.com:~/webserver/')
-os.system('scp -r -i ~/.keys/EC2WebServer.pem server/Firebase.json ec2-user@ec2-3-130-58-56.us-east-2.compute.amazonaws.com:~/webserver/')
+os.system('scp -r -i ~/.keys/EC2WebServer.pem Firebase.json ec2-user@ec2-3-130-58-56.us-east-2.compute.amazonaws.com:~/webserver/')
 os.system('scp -r -i ~/.keys/EC2WebServer.pem requirements.txt ec2-user@ec2-3-130-58-56.us-east-2.compute.amazonaws.com:~/webserver/requirements.txt')
 
 os.system('ssh -t -i ~/.keys/EC2WebServer.pem ec2-user@ec2-3-130-58-56.us-east-2.compute.amazonaws.com \'pip install -r ~/webserver/requirements.txt\'')
