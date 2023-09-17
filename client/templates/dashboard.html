@@ -121,7 +121,7 @@
         messageElement.className = 'message';
         messageElement.textContent = message;
         chatMessages.appendChild(messageElement);
-    
+        
         // Clear the input field after sending
         messageInput.value = '';
     
@@ -147,6 +147,29 @@
         // Send the request with the user's message and language
         var language = 'en'; 
         xhr.send('text=' + message + '&language=' + language);
+
+        
+        // Convert the array to a JSON string
+        var jsonString = JSON.stringify(chatMessages);
+
+        // Create a form to submit the JSON data
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/process_array';
+
+        // Create a hidden input field to hold the JSON data
+        var input = document.createElement('input');
+
+        input.type = 'hidden';
+        input.name = 'json_data';
+        input.value = jsonString;
+
+        // Add the input field to the form
+        form.appendChild(input);
+
+        // Add the form to the page and submit it
+        document.body.appendChild(form);
+        form.submit();
     }
 
     function searchChat() {

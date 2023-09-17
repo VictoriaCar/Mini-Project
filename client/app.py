@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
@@ -139,6 +139,19 @@ def login():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/process_array', methods=['POST'])
+def process_array():
+    if request.method == 'POST':
+        # Retrieve the JSON data from the hidden input field
+        json_data = request.form['json_data']
+
+        # Parse the JSON data back into a Python list or dictionary
+        array_data = json.loads(json_data)
+
+        # Process the array_data as needed
+        # For example, you can return it as a JSON response
+        return {'result': array_data}
+    
 @app.route('/logout')
 @login_required
 def logout():
