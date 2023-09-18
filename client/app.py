@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
@@ -134,23 +134,31 @@ def login():
 
     return render_template('login.html', form=form)
 
-@app.route('/dashboard')
-@login_required
-def dashboard():
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():        
     return render_template('dashboard.html')
 
-@app.route('/process_array', methods=['POST'])
-def process_array():
+@app.route('/process_msg', methods=['GET', 'POST'])
+def processMessage():
     if request.method == 'POST':
-        # Retrieve the JSON data from the hidden input field
-        json_data = request.form['json_data']
+        try:
+            data = request.get_json()  # This will parse the JSON data sent from the client
+            # You can now work with the 'data' variable, which will contain your JavaScript array
+            # For example, you can process the array and return a response
 
-        # Parse the JSON data back into a Python list or dictionary
-        array_data = json.loads(json_data)
-
-        # Process the array_data as needed
-        # For example, you can return it as a JSON response
-        return {'result': array_data}
+            packet = {
+                "cmd" : "SET",
+                "email" : current_user.email,
+                "username" : current_user.email,
+                "message" : data,
+            }
+            create_client_socket(packet)
+            
+            print(data)
+        except Exception as e:
+            pass
+        
+    return render_template('dashboard.html')
     
 @app.route('/logout')
 @login_required

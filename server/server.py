@@ -12,12 +12,12 @@ firebase_admin.initialize_app(cred, {
     'databaseURL' : 'https://moodyapp-feec9-default-rtdb.firebaseio.com'
 })
 
-test_mode = True
+test_mode = False
 
 # firebase
 def get_users():
     global test_mode
-    return db.reference('/users/') if test_mode else db.reference('/test/')
+    return db.reference('/users') if not test_mode else db.reference('/test')
 
 def init_test():
     # set data
@@ -25,10 +25,10 @@ def init_test():
     ref.set({
         "test" : -1
     })
-    ref = db.reference('/test/')
+    ref = db.reference('/test')
     # ref.set({}) # delete first
 
-    print(db.reference('/test/').get())
+    print(db.reference('/test').get())
 
     # ref.push().set(value)
     # can use push() for autokey gen, leave as set() for test
@@ -70,17 +70,19 @@ def init_test():
     #     },
     # })
 
-    print(db.reference('/test/').get()) # should see key0 and key1
+    print(db.reference('/test').get()) # should see key0 and key1
 
 
 def set_message(cmds):
     ref = get_users()
-    for k, v in ref.get().items():
-        if v['email'] == cmds['email']:
-            ref.child(k).update({
-                'messages' : [(cmds['message'],time.time())].extend(v['messages'])
-            })
-        return None
+    if ref.get() != -1:
+        for k, v in ref.get().items():
+            if v['email'] == cmds['email']:
+                v['messages'].append((cmds['message'],time.time()))
+                ref.child(k).update({
+                    'messages' : v['messages']
+                })
+            return None
     
     ref.push({
         'email' : cmds['email'],
@@ -127,8 +129,6 @@ def user_register(cmds):
          'key' : cmds['key'],
      })
     return auth.get_user_by_email(cmds['email'])
-
-# init_test()
 
 def parse_command(packet):
     fbdb = {
@@ -207,9 +207,15 @@ def server_init():
     # create a queue of messging (low volume traffic, no need for LB)
     threading.Thread(target=server).start()
 
-
+def init_db():
+    if db.reference('/users').get() == None:
+        ref = db.reference("/")
+        ref.set({
+            "users" : -1
+        })
 
 if __name__ == "__main__":
+    init_db()
     server_init()
 
 ### NOTES ###
