@@ -1,7 +1,9 @@
+# ChatGPT used for interface, including files: flaskblog.py | login/register/home/dashboard.hmt | style.css
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm 
+import requests # For sentiment analysis
 from flask_sqlalchemy import SQLAlchemy
 import socket
 import json
@@ -18,6 +20,8 @@ host = '3.130.58.56'  # Loopback address for local testing
 port = 7807
 
 sessions = []
+chat_messages = []
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,6 +47,20 @@ def create_client_socket(packet):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+    # Sentiment Analysis
+def perform_sentiment_analysis(text, language):
+    api_key = '0e1d08c813b3f2b41a1eb789b98ab2d5'
+    url = 'https://api.meaningcloud.com/sentiment-2.1'
+
+    payload = {
+        'key': api_key,
+        'txt': text,
+        'lang': 'en',  
+    }
+
+    response = requests.post(url, data=payload)
+    return response.json()
 
 # # Load user function for Flask-Login
 # @login_manager.user_loader
@@ -134,9 +152,34 @@ def login():
 
     return render_template('login.html', form=form)
 
+# Route for the dashboard
 @app.route('/dashboard', methods=['GET', 'POST'])
-def dashboard():        
-    return render_template('dashboard.html')
+@login_required
+def dashboard():
+    if request.method == 'POST':
+        text = request.form['text']
+        language = request.form['language']
+
+        if text and language:
+            # Analyze the sentiment of the user's message
+            sentiment_result = perform_sentiment_analysis(text, language)
+            chat_messages.append((text, sentiment_result))
+
+    return render_template('dashboard.html', chat_messages=chat_messages)
+
+    # Aanalyze_sentiment route 
+@app.route('/analyze_sentiment', methods=['POST'])
+@login_required
+def analyze_sentiment():
+    text = request.form['text']
+    language = request.form['language']
+
+    if text and language:
+        # Analyze the sentiment of the user's message
+        sentiment_result = perform_sentiment_analysis(text, language)
+        return jsonify(sentiment_result)
+
+    return jsonify({'error': 'Invalid request'}), 400
 
 @app.route('/process_msg', methods=['GET', 'POST'])
 def processMessage():
