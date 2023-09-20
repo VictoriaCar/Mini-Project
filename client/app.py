@@ -1,4 +1,4 @@
-# ChatGPT used for interface, including files: flaskblog.py | login/register/home/dashboard.hmt | style.css
+# ChatGPT used for interface, including files: app.py | login/register/home/dashboard.hmt | style.css
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
